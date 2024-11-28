@@ -1,0 +1,92 @@
+/* 重置默认样式 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* 设置全局字体和基础样式 */
+body {
+  font-family: 'Courier New', monospace;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Markdown 内容样式 */
+.markdown-content {
+  color: #00ff00;
+}
+
+.markdown-content pre {
+  background-color: rgba(0, 255, 0, 0.1);
+  padding: 1rem;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
+.markdown-content code {
+  font-family: 'Courier New', monospace;
+  background-color: rgba(0, 255, 0, 0.1);
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+}
+
+.markdown-content p {
+  margin: 1em 0;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4 {
+  margin: 1.5em 0 1em;
+  color: #00ff00;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  margin: 1em 0;
+  padding-left: 2em;
+}
+
+.markdown-content a {
+  color: #00ff00;
+  text-decoration: underline;
+}
+
+.markdown-content a:hover {
+  color: #00cc00;
+}
+
+.markdown-content blockquote {
+  border-left: 3px solid #00ff00;
+  margin: 1em 0;
+  padding-left: 1em;
+  color: rgba(0, 255, 0, 0.8);
+}
+
+/* 自定义滚动条全局样式 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #000;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #00ff00;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #00cc00;
+}
+
+/* 文本选择样式 */
+::selection {
+  background: rgba(0, 255, 0, 0.3);
+  color: #00ff00;
+} 
