@@ -39,6 +39,22 @@ class ClaudeService {
   private conversationHistories: Record<string, ConversationMessage[]> = {}
 
   /**
+   * 可配置的默认参数
+   */
+  public defaultConfig: ClaudeConfig = {
+    max_tokens: 4000,          // 最大返回的token数量
+    temperature: 0.7,          // 温度参数，控制输出的随机性 (0.0-1.0)
+    top_p: 0.9,               // 控制输出的多样性
+    top_k: 10,                // 控制每一步生成时考虑的token数量
+    system: "You are Claude, an AI assistant. Respond in Chinese (中文).",  // 系统提示语
+    stop_sequences: [],        // 停止序列
+    messages_window: 10,       // 保留的历史消息数量
+    repetition_penalty: 1.1,   // 重复惩罚系数
+    min_tokens: 0,            // 最小生成长度
+    use_context: true         // 是否增强上下文理解
+  }
+
+  /**
    * 发送消息到 Claude API
    * @param model - 使用的模型ID
    * @param message - 消息文本
@@ -52,75 +68,113 @@ class ClaudeService {
         this.conversationHistories[conversationId] = []
       }
 
-      const fileContents = files.map(file => {
-        if (file.content.startsWith('data:image')) {
-          return {
-            type: 'image' as const,
-            source: {
-              type: 'base64' as const,
-              media_type: file.content.split(';')[0].split(':')[1],
-              data: file.content.split(',')[1]
-            }
-          }
-        } else {
-          return {
-            type: 'text' as const,
-            text: file.content
-          }
-        }
-      })
-
-      this.conversationHistories[conversationId].push({
+      // 创建新的消息对象
+      const newMessage: ConversationMessage = {
         role: 'user',
         content: [
           {
             type: 'text',
             text: message
-          },
-          ...fileContents
-        ]
-      })
-
-      const response = await fetch('/api/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': API_CONFIG.API_KEY,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true'
-        },
-        body: JSON.stringify({
-          model: model,
-          max_tokens: 4000,
-          system: "You are Claude, an AI assistant. Respond in Chinese (中文).",
-          messages: this.conversationHistories[conversationId].slice(-10)
-        })
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error?.message || 'API 请求失败')
-      }
-
-      const data = await response.json()
-      
-      this.conversationHistories[conversationId].push({
-        role: 'assistant',
-        content: [
-          {
-            type: 'text',
-            text: data.content[0].text
           }
         ]
-      })
+      }
 
-      return {
-        content: data.content[0].text
+      // 处理文件内容
+      if (files.length > 0) {
+        try {
+          const fileContents = files.map(file => {
+            if (file.content.startsWith('data:image')) {
+              const [mediaType, base64Data] = file.content.split(',');
+              const extractedMediaType = mediaType.replace('data:', '').split(';')[0];
+              
+              const supportedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+              if (!supportedTypes.includes(extractedMediaType)) {
+                throw new Error('不支持的图片格式，请使用 JPEG、PNG、GIF 或 WebP 格式');
+              }
+
+              return {
+                type: 'image' as const,
+                source: {
+                  type: 'base64' as const,
+                  media_type: extractedMediaType,
+                  data: base64Data
+                }
+              };
+            } else {
+              return {
+                type: 'text' as const,
+                text: file.content
+              };
+            }
+          });
+          newMessage.content.push(...fileContents);
+        } catch (error) {
+          throw new Error(`处理文件时出错: ${error instanceof Error ? error.message : '未知错误'}`);
+        }
+      }
+
+      // 添加用户消息到历史记录
+      this.conversationHistories[conversationId].push(newMessage);
+
+      try {
+        const response = await fetch('/api/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': API_CONFIG.API_KEY,
+            'anthropic-version': '2023-06-01',
+            'anthropic-dangerous-direct-browser-access': 'true'
+          },
+          body: JSON.stringify({
+            model: model,
+            max_tokens: this.defaultConfig.max_tokens,
+            temperature: this.defaultConfig.temperature,
+            top_p: this.defaultConfig.top_p,
+            top_k: this.defaultConfig.top_k,
+            system: this.defaultConfig.system,
+            stop_sequences: this.defaultConfig.stop_sequences,
+            messages: this.conversationHistories[conversationId].slice(-this.defaultConfig.messages_window)
+          })
+        });
+
+        if (!response.ok) {
+          this.conversationHistories[conversationId].pop();
+          const errorData = await response.json();
+          throw new Error(errorData.error?.message || 'API 请求失败');
+        }
+
+        const data = await response.json();
+        
+        // 添加助手的回复
+        this.conversationHistories[conversationId].push({
+          role: 'assistant',
+          content: [
+            {
+              type: 'text',
+              text: data.content[0].text
+            }
+          ]
+        });
+
+        return {
+          content: data.content[0].text
+        };
+      } catch (error) {
+        this.conversationHistories[conversationId].pop();
+        throw error;
       }
     } catch (error) {
-      console.error('API 错误:', error)
-      throw error
+      console.error('API 错误:', error);
+      throw error;
     }
+  }
+
+  /**
+   * 更新默认配置
+   * @param newConfig - 新的配置参数
+   */
+  updateConfig(newConfig: Partial<typeof this.defaultConfig>): void {
+    this.defaultConfig = { ...this.defaultConfig, ...newConfig };
   }
 
   /**

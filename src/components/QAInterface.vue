@@ -1,10 +1,17 @@
 <template>
   <div class="app-container">
-    <button class="logout-button" @click="handleLogout" data-tooltip="退出登录">
-      <svg viewBox="0 0 24 24" class="logout-icon">
-        <path d="M16 17v-3H9v-4h7V7l5 5-5 5M14 2a2 2 0 012 2v2h-2V4H5v16h9v-2h2v2a2 2 0 01-2 2H5a2 2 0 01-2-2V4a2 2 0 012-2h9z"/>
-      </svg>
-    </button>
+    <div class="header-controls">
+      <button class="control-button settings-button" @click="showSettings = true" data-tooltip="API 设置">
+        <svg viewBox="0 0 24 24" class="control-icon">
+          <path d="M12 15.5A3.5 3.5 0 0 1 8.5 12 3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5 3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.65.07-.97 0-.32-.03-.65-.07-.97l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65c-.04-.24-.25-.42-.5-.42h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.63c-.04.32-.07.65-.07.97 0 .32.03.65.07.97l-2.11 1.63c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.31.61.22l2.49-1c.52.39 1.06.73 1.69.98l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.25 1.17-.59 1.69-.98l2.49 1c.22.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.63z"/>
+        </svg>
+      </button>
+      <button class="control-button logout-button" @click="handleLogout" data-tooltip="退出登录">
+        <svg viewBox="0 0 24 24" class="control-icon">
+          <path d="M16 17v-3H9v-4h7V7l5 5-5 5M14 2a2 2 0 012 2v2h-2V4H5v16h9v-2h2v2a2 2 0 01-2 2H5a2 2 0 01-2-2V4a2 2 0 012-2h9z"/>
+        </svg>
+      </button>
+    </div>
     
     <ConversationList
       :current-conversation-id="currentConversationId"
@@ -30,6 +37,123 @@
         </div>
       </div>
       
+      <div v-if="showSettings" class="settings-panel">
+        <div class="settings-header">
+          <h3>API 设置</h3>
+          <button class="close-button" @click="showSettings = false">×</button>
+        </div>
+        
+        <div class="settings-content">
+          <!-- 基础设置组 -->
+          <div class="settings-group">
+            <h4 class="group-title">基础设置</h4>
+            
+            <div class="setting-item">
+              <label data-tooltip="控制AI回复的最大长度，较大的值允许更详细的回答，但会消耗更多tokens">最大返回 Tokens</label>
+              <div class="input-with-value">
+                <input type="range" v-model="apiSettings.max_tokens" min="100" max="10000" step="100">
+                <span class="value-display">{{ apiSettings.max_tokens }}</span>
+              </div>
+            </div>
+            
+            <div class="setting-item">
+              <label data-tooltip="控制输出的随机性：值越低输出越保守可预测，值越高输出越有创意多样">温度 (Temperature)</label>
+              <div class="input-with-value">
+                <input type="range" v-model="apiSettings.temperature" min="0" max="1" step="0.1">
+                <span class="value-display">{{ apiSettings.temperature }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 高级设置组 -->
+          <div class="settings-group">
+            <h4 class="group-title">高级设置</h4>
+            
+            <div class="setting-item">
+              <label data-tooltip="控制输出的多样性：较低的值会使输出更加集中和确定，较高的值会产生更多样化的输出">Top P (核采样)</label>
+              <div class="input-with-value">
+                <input type="range" v-model="apiSettings.top_p" min="0" max="1" step="0.1">
+                <span class="value-display">{{ apiSettings.top_p }}</span>
+              </div>
+            </div>
+            
+            <div class="setting-item">
+              <label data-tooltip="控制每一步生成时考虑的候选词数量：较小的值会使输出更保守，较大的值会使用更丰富的词汇">Top K</label>
+              <div class="input-with-value">
+                <input type="range" v-model="apiSettings.top_k" min="1" max="100" step="1">
+                <span class="value-display">{{ apiSettings.top_k }}</span>
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <label data-tooltip="控制模型对重复内容的惩罚程度：较高的值会减少重复，但可能影响连贯性">重复惩罚</label>
+              <div class="input-with-value">
+                <input type="range" v-model="apiSettings.repetition_penalty" min="1" max="2" step="0.1">
+                <span class="value-display">{{ apiSettings.repetition_penalty }}</span>
+              </div>
+            </div>
+
+            <div class="setting-item">
+              <label data-tooltip="控制模型生成时的最小长度：确保生成的内容不会过于简短">最小生成长度</label>
+              <div class="input-with-value">
+                <input type="range" v-model="apiSettings.min_tokens" min="0" max="1000" step="10">
+                <span class="value-display">{{ apiSettings.min_tokens }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 上下文设置组 -->
+          <div class="settings-group">
+            <h4 class="group-title">上下文设置</h4>
+            
+            <div class="setting-item">
+              <label data-tooltip="保留的历史消息数量：较多的历史消息可以提供更好的上下文理解，但会消耗更多tokens">历史消息数量</label>
+              <div class="input-with-value">
+                <input type="range" v-model="apiSettings.messages_window" min="1" max="20" step="1">
+                <span class="value-display">{{ apiSettings.messages_window }}</span>
+              </div>
+            </div>
+
+            <div class="setting-item system-prompt">
+              <label data-tooltip="设定AI助手角色和行为方式，影响其回答的风格和专业方向">系统提示语</label>
+              <div class="system-prompt-container">
+                <textarea 
+                  v-model="apiSettings.system" 
+                  rows="6"
+                  placeholder="设定AI助手的角色和行为方式..."
+                  class="system-prompt-input"
+                ></textarea>
+                <div class="system-prompt-tips">
+                  <p>提示：</p>
+                  <ul>
+                    <li>可以设定AI的专业领域</li>
+                    <li>可以定义回答的风格和语气</li>
+                    <li>可以指定特定的输出格式</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 高级功能组 -->
+          <div class="settings-group">
+            <h4 class="group-title">高级功能</h4>
+            
+            <div class="setting-item checkbox-item">
+              <label data-tooltip="启用此选项可以让AI更好地理解和保持多轮对话的上下文">
+                <input type="checkbox" v-model="apiSettings.use_context">
+                增强上下文理解
+              </label>
+            </div>
+          </div>
+        </div>
+        
+        <div class="settings-footer">
+          <button class="reset-button" @click="resetSettings">恢复默认值</button>
+          <button class="save-button" @click="saveSettings">保存设置</button>
+        </div>
+      </div>
+      
       <div class="chat-container">
         <div class="chat-history" ref="chatHistoryRef">
           <div v-for="(message, index) in chatHistory" 
@@ -41,44 +165,9 @@
             </div>
             <div class="message-time">{{ formatTime() }}</div>
           </div>
-          <div v-if="isLoading" class="message assistant loading-message">
-            <div class="message-content">
-              <div class="avatar">🤖</div>
-              <div class="message-body loading-body">
-                <div class="typing-indicator">
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
 
         <div class="input-area">
-          <div class="input-header">
-            <div class="resize-handle"></div>
-            <button 
-              class="reset-height-button" 
-              @click="resetInputHeight"
-              data-tooltip="还原输入框高度"
-            >
-              <svg viewBox="0 0 24 24" class="reset-icon">
-                <path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
-              </svg>
-            </button>
-          </div>
-          <textarea
-            ref="messageInputRef"
-            v-model="userInput"
-            class="message-input"
-            placeholder="输入消息... (Enter 发送, Cmd/Ctrl + Enter 换行)"
-            @keydown.enter.exact.prevent="handleEnterPress"
-            @keydown.meta.enter="handleNewLine"
-            @keydown.ctrl.enter="handleNewLine"
-            :disabled="isLoading"
-          ></textarea>
-          
           <div class="action-buttons">
             <label class="action-button upload-btn" data-tooltip="上传文件">
               <input
@@ -101,6 +190,30 @@
               <i class="icon">{{ isLoading ? '⏳' : '↑' }}</i>
             </button>
           </div>
+
+          <div class="input-header">
+            <div class="resize-handle"></div>
+            <button 
+              class="reset-height-button" 
+              @click="resetInputHeight"
+              data-tooltip="还原输入框高度"
+            >
+              <svg viewBox="0 0 24 24" class="reset-icon">
+                <path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
+              </svg>
+            </button>
+          </div>
+          
+          <textarea
+            ref="messageInputRef"
+            v-model="userInput"
+            class="message-input"
+            placeholder="输入消息... (Enter 发送, Cmd/Ctrl + Enter 换行)"
+            @keydown.enter.exact.prevent="handleEnterPress"
+            @keydown.meta.enter="handleNewLine"
+            @keydown.ctrl.enter="handleNewLine"
+            :disabled="isLoading"
+          ></textarea>
         </div>
       </div>
     </div>
@@ -108,7 +221,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, onMounted } from 'vue'
+import { ref, nextTick, onMounted, onUnmounted } from 'vue'
 import ConversationList from './ConversationList.vue'
 import { API_CONFIG } from '../config/api'
 import { fileService } from '../services/fileService'
@@ -133,6 +246,9 @@ const lastSendTime = ref(0)
 const SEND_COOLDOWN = 1000 // 1秒冷却时间
 const currentConversationId = ref('')
 const DEFAULT_INPUT_HEIGHT = '44px'
+const showSettings = ref(false)
+const apiSettings = ref({ ...claudeService.defaultConfig })
+const STORAGE_KEY = 'claude_api_settings'
 
 const formatMessage = (content: string): string => {
   return marked(content)
@@ -167,6 +283,15 @@ const handleEnterPress = async (e: KeyboardEvent): Promise<void> => {
     e.preventDefault()
     return
   }
+  
+  // 阻止默认的回车换行行为
+  e.preventDefault()
+  
+  // 如果输入框为空或只包含空白字符，不发送消息
+  if (!userInput.value.trim()) {
+    return
+  }
+  
   lastSendTime.value = now
   await sendMessage()
 }
@@ -181,14 +306,16 @@ const scrollToBottom = (): void => {
 }
 
 const sendMessage = async (): Promise<void> => {
-  if (!userInput.value.trim() || isLoading.value) return
+  const messageText = userInput.value.replace(/\n\s*\n/g, '\n').replace(/^\s+|\s+$/g, '')
+  
+  if (!messageText || isLoading.value) return
 
   isLoading.value = true
   
   try {
     const newUserMessage: Message = {
       role: 'user',
-      content: userInput.value
+      content: messageText
     }
     
     const conversation = conversationService.getConversation(currentConversationId.value)
@@ -197,13 +324,12 @@ const sendMessage = async (): Promise<void> => {
     conversation.messages.push(newUserMessage)
     chatHistory.value = conversation.messages
     
-    const messageToSend = userInput.value
     userInput.value = ''
     scrollToBottom()
 
     const messageData = {
       model: selectedModel.value,
-      message: messageToSend,
+      message: messageText,
       files: uploadedFiles.value,
       conversationId: currentConversationId.value
     }
@@ -212,13 +338,19 @@ const sendMessage = async (): Promise<void> => {
 
     const response = await claudeService.sendMessage(messageData)
     
-    const assistantMessage: Message = {
-      role: 'assistant',
-      content: response.content
+    if (response && response.content) {
+      const assistantMessage: Message = {
+        role: 'assistant',
+        content: response.content
+      }
+      
+      conversation.messages.push(assistantMessage)
+      chatHistory.value = [...conversation.messages]
+      await nextTick()
+      scrollToBottom()
+    } else {
+      throw new Error('接收到空的响应内容')
     }
-    
-    conversation.messages.push(assistantMessage)
-    chatHistory.value = conversation.messages
   } catch (error) {
     const errorMessage: Message = {
       role: 'assistant',
@@ -278,6 +410,15 @@ onMounted(() => {
       e.preventDefault()
     }
   })
+
+  // 从 localStorage 加载设置
+  const savedSettings = localStorage.getItem(STORAGE_KEY)
+  if (savedSettings) {
+    const parsedSettings = JSON.parse(savedSettings)
+    apiSettings.value = { ...claudeService.defaultConfig, ...parsedSettings }
+    // 立即应用加载的设置
+    claudeService.updateConfig(apiSettings.value)
+  }
 })
 
 const adjustHeight = (): void => {
@@ -343,6 +484,26 @@ const resetInputHeight = (): void => {
     messageInputRef.value.style.height = DEFAULT_INPUT_HEIGHT
   }
 }
+
+const saveSettings = () => {
+  claudeService.updateConfig(apiSettings.value)
+  // 保存到 localStorage
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(apiSettings.value))
+  showSettings.value = false
+}
+
+const resetSettings = () => {
+  apiSettings.value = { ...claudeService.defaultConfig }
+  // 清除 localStorage 中的设置
+  localStorage.removeItem(STORAGE_KEY)
+}
+
+// 在组件卸载时清理定时器
+onUnmounted(() => {
+  if (typingTimer) {
+    clearTimeout(typingTimer)
+  }
+})
 </script>
 
 <style scoped>
@@ -472,6 +633,10 @@ const resetInputHeight = (): void => {
   gap: 12px;
 }
 
+.message.user .message-content {
+  flex-direction: row-reverse;
+}
+
 .avatar {
   width: 32px;
   height: 32px;
@@ -481,14 +646,19 @@ const resetInputHeight = (): void => {
   justify-content: center;
   background: #f5f5f7;
   font-size: 1.2em;
+  flex-shrink: 0;  /* 防止头像被压缩 */
 }
 
 .message-body {
-  padding: 12px 16px;
+  padding: 8px 16px;
   border-radius: 18px;
   background: #f5f5f7;
-  line-height: 1.5;
+  line-height: 1.4;
   font-size: 0.95em;
+  white-space: pre-wrap;
+  min-height: 35px;
+  display: flex;
+  align-items: center;
 }
 
 .user .message-body {
@@ -505,7 +675,15 @@ const resetInputHeight = (): void => {
   font-size: 0.8em;
   color: #999;
   margin-top: 4px;
-  margin-left: 44px;
+  padding: 0 44px;  /* 与头像对齐 */
+}
+
+.user .message-time {
+  text-align: right;
+}
+
+.assistant .message-time {
+  text-align: left;
 }
 
 .input-area {
@@ -586,14 +764,14 @@ const resetInputHeight = (): void => {
 
 .action-buttons {
   display: flex;
-  gap: 12px;
-  justify-content: flex-end;
+  gap: 8px;
   align-items: center;
+  margin-bottom: 12px;
 }
 
 .action-button {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   border: none;
   background: #f5f5f7;
@@ -610,8 +788,8 @@ const resetInputHeight = (): void => {
 }
 
 .send-button {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   border: none;
   background: #007AFF;
@@ -637,48 +815,50 @@ const resetInputHeight = (): void => {
 }
 
 .loading-message {
-  opacity: 0.8;
+  opacity: 1;
+  margin-bottom: 0;
 }
 
 .loading-body {
   min-width: 60px;
+  min-height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: #f5f5f7;
+  border-radius: 18px 18px 18px 4px;
+  padding: 8px 16px;
 }
 
-.typing-indicator {
+.typing-dots {
   display: flex;
+  align-items: center;
   gap: 4px;
-  padding: 4px 8px;
 }
 
-.typing-indicator span {
-  width: 6px;
-  height: 6px;
-  background-color: #666666;
+.typing-dots span {
+  width: 8px;
+  height: 8px;
+  background-color: #999;
   border-radius: 50%;
-  animation: typing 1.4s infinite ease-in-out;
+  display: inline-block;
+  animation: bounce 1.4s infinite ease-in-out both;
 }
 
-.typing-indicator span:nth-child(1) {
-  animation-delay: 0s;
+.typing-dots span:nth-child(1) {
+  animation-delay: -0.32s;
 }
 
-.typing-indicator span:nth-child(2) {
-  animation-delay: 0.2s;
+.typing-dots span:nth-child(2) {
+  animation-delay: -0.16s;
 }
 
-.typing-indicator span:nth-child(3) {
-  animation-delay: 0.4s;
-}
-
-@keyframes typing {
-  0%, 100% {
-    transform: scale(0.7);
-    opacity: 0.5;
+@keyframes bounce {
+  0%, 80%, 100% { 
+    transform: scale(0);
+    opacity: 0.4;
   }
-  50% {
+  40% { 
     transform: scale(1);
     opacity: 1;
   }
@@ -770,10 +950,16 @@ const resetInputHeight = (): void => {
   margin-top: 0;
 }
 
-.logout-button {
+.header-controls {
   position: fixed;
   top: 20px;
   right: 20px;
+  display: flex;
+  gap: 12px;
+  z-index: 1000;
+}
+
+.control-button {
   width: 40px;
   height: 40px;
   border-radius: 20px;
@@ -784,43 +970,494 @@ const resetInputHeight = (): void => {
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  z-index: 1000;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
-.logout-button:hover {
+.control-button:hover {
   background: #f5f5f7;
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-.logout-icon {
+.control-icon {
   width: 20px;
   height: 20px;
   fill: #666666;
 }
 
-.logout-button:hover .logout-icon {
+.control-button:hover .control-icon {
   fill: #007AFF;
 }
 
-.user .message-content {
-  flex-direction: row-reverse; /* 反转内容顺序 */
+.settings-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid #e5e5e5;
+  background: #ffffff;
+  color: #666666;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.user .message-time {
+.settings-button:hover {
+  background: #f5f5f7;
+  border-color: #007AFF;
+  color: #007AFF;
+}
+
+.settings-icon {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.settings-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 480px;
+  max-height: 80vh;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+}
+
+.settings-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e5e5;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.settings-header h3 {
+  font-size: 16px;
+  font-weight: 500;
+  color: #1d1d1f;
+  margin: 0;
+}
+
+.settings-content {
+  padding: 0;
+  max-height: calc(80vh - 120px);
+  overflow-y: auto;
+}
+
+.settings-group {
+  padding: 20px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.settings-group:last-child {
+  border-bottom: none;
+}
+
+.group-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1d1d1f;
+  margin: 0 0 16px 0;
+}
+
+.setting-item {
+  margin-bottom: 20px;
+}
+
+.setting-item:last-child {
+  margin-bottom: 0;
+}
+
+.input-with-value {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.value-display {
+  min-width: 40px;
   text-align: right;
-  margin-left: 0;
-  margin-right: 44px;
+  font-size: 13px;
+  color: #666666;
 }
 
-.user .message-body {
+.setting-item input[type="range"] {
+  flex: 1;
+  height: 4px;
+  background: #e5e5e5;
+  border-radius: 2px;
+  -webkit-appearance: none;
+}
+
+.setting-item input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
   background: #007AFF;
-  color: #ffffff;
-  border-radius: 18px 18px 4px 18px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.assistant .message-body {
-  border-radius: 18px 18px 18px 4px;
+.setting-item input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.checkbox-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+.checkbox-item label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.settings-footer {
+  padding: 16px;
+  border-top: 1px solid #e5e5e5;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.reset-button,
+.save-button {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9em;
+  transition: all 0.2s ease;
+}
+
+.reset-button {
+  background: #f5f5f7;
+  color: #666666;
+}
+
+.save-button {
+  background: #007AFF;
+  color: white;
+}
+
+.reset-button:hover {
+  background: #e5e5e5;
+}
+
+.save-button:hover {
+  background: #0066CC;
+}
+
+.close-button {
+  width: 24px;
+  height: 24px;
+  border-radius: 12px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 20px;
+  color: #666666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-button:hover {
+  background: #f5f5f7;
+}
+
+.setting-item label[data-tooltip]:before {
+  width: 200px;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.4;
+  bottom: 100%;
+  margin-bottom: 5px;
+}
+
+.setting-item label[data-tooltip]:after {
+  bottom: 100%;
+  margin-bottom: 1px;
+}
+
+/* 为 header-controls 中的按钮单独设置 tooltip 样式 */
+.header-controls .control-button[data-tooltip]:before {
+  bottom: auto;  /* 移除底部定位 */
+  top: 100%;    /* 改为顶部定位 */
+  margin-bottom: 0;
+  margin-top: 8px;
+}
+
+.header-controls .control-button[data-tooltip]:after {
+  bottom: auto;  /* 移除底部定位 */
+  top: 100%;    /* 改为顶部定位 */
+  border-top-color: transparent;  /* 移除顶部三角形 */
+  border-bottom-color: rgba(0, 0, 0, 0.8);  /* 添加底部三角形 */
+  margin-bottom: 0;
+  margin-top: 4px;
+}
+
+.system-prompt {
+  margin-top: 24px;
+}
+
+.system-prompt-container {
+  background: #f9f9f9;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.system-prompt-input {
+  width: 100%;
+  min-height: 120px;
+  padding: 12px;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 14px;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.system-prompt-tips {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed #e5e5e5;
+  font-size: 12px;
+  color: #666666;
+}
+
+.system-prompt-tips p {
+  margin: 0 0 8px 0;
+  font-weight: 500;
+}
+
+.system-prompt-tips ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.system-prompt-tips li {
+  margin: 4px 0;
+}
+
+/* 修改 tooltip 样式，确保内容完全可见 */
+[data-tooltip]:before {
+  max-width: none;  /* 移除最大宽度限制 */
+  white-space: normal;  /* 允许文本换行 */
+  width: max-content;  /* 根据内容自动调整宽度 */
+  max-width: 300px;   /* 设置最大宽度 */
+  z-index: 1100;      /* 确保显示在最上层 */
+}
+
+.settings-panel [data-tooltip]:before {
+  transform: translate(-50%, -100%);  /* 调整提示框位置 */
+  margin-top: -8px;  /* 微调位置 */
+}
+
+/* 确保设置面板中的 tooltip 不会被截断 */
+.settings-panel {
+  position: fixed;
+  overflow: visible;  /* 允许内容溢出 */
+}
+
+.settings-content {
+  overflow-y: auto;
+  overflow-x: visible;  /* 允许水平方向溢出 */
+}
+
+/* 移除多余的设置按钮样式 */
+.model-controls {
+  display: none;
+}
+
+/* 修改设置面板相关样式 */
+.settings-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 480px;
+  max-height: 80vh;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+}
+
+/* 设置面板中的 tooltip 样式 */
+.settings-panel [data-tooltip] {
+  position: relative;
+}
+
+.settings-panel [data-tooltip]:before {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: auto;
+  right: -10px;
+  top: 50%;
+  transform: translateY(-50%) translateX(100%);
+  margin: 0;
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: normal;
+  width: 280px;
+  min-height: fit-content;
+  height: auto;
+  border-radius: 8px;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
+  pointer-events: none;
+  z-index: 1100;
+  word-wrap: break-word;
+  overflow: visible;
+}
+
+.settings-panel [data-tooltip]:after {
+  content: '';
+  position: absolute;
+  left: auto;
+  right: -10px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 8px solid transparent;
+  border-right-color: rgba(0, 0, 0, 0.8);
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
+  pointer-events: none;
+}
+
+.settings-panel [data-tooltip]:hover:before,
+.settings-panel [data-tooltip]:hover:after {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* 确保设置面板内容可以正常滚动 */
+.settings-content {
+  overflow-y: auto;
+  overflow-x: visible;
+  padding-right: 30px;
+  position: relative;
+}
+
+.settings-panel {
+  overflow: visible !important;
+}
+
+/* 添加打字机效果相关样式 */
+.message-body {
+  /* 其他样式保持不变 */
+  white-space: pre-wrap;  /* 保留换行符 */
+}
+
+/* 确保打字时的光标效果 */
+.message.assistant:last-child .message-body {
+  border-right: 2px solid transparent;
+  animation: cursor-blink 1s infinite;
+}
+
+@keyframes cursor-blink {
+  0%, 100% {
+    border-right-color: transparent;
+  }
+  50% {
+    border-right-color: currentColor;
+  }
+}
+
+/* 添加蒙层样式 */
+.settings-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  backdrop-filter: blur(2px);
+}
+
+/* 确保设置面板在蒙层之上 */
+.settings-panel {
+  z-index: 1000;
+}
+
+/* 统一设置面板中的 tooltip 样式为右侧显示 */
+.settings-panel [data-tooltip] {
+  position: relative;
+}
+
+.settings-panel [data-tooltip]:before {
+  content: attr(data-tooltip);
+  position: absolute;
+  left: auto;
+  right: -10px;
+  top: 50%;
+  transform: translateY(-50%) translateX(100%);
+  margin: 0;
+  padding: 12px 16px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: normal;
+  width: 280px;
+  min-height: fit-content;
+  height: auto;
+  border-radius: 8px;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
+  pointer-events: none;
+  z-index: 1100;
+  word-wrap: break-word;
+  overflow: visible;
+}
+
+.settings-panel [data-tooltip]:after {
+  content: '';
+  position: absolute;
+  left: auto;
+  right: -10px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 8px solid transparent;
+  border-right-color: rgba(0, 0, 0, 0.8);
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
+  pointer-events: none;
+}
+
+.settings-panel [data-tooltip]:hover:before,
+.settings-panel [data-tooltip]:hover:after {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* 调整内容区域的内边距，为右侧 tooltip 预留空间 */
+.settings-content {
+  padding-right: 30px;
 }
 </style> 

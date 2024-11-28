@@ -15,18 +15,18 @@ export const fileService = {
    * @returns {boolean} 验证通过返回 true
    */
   validateFile(file: File): boolean {
-    if (file.size > API_CONFIG.MAX_FILE_SIZE) {
-      throw new Error(`文件大小不能超过 ${API_CONFIG.MAX_FILE_SIZE / 1024 / 1024}MB`)
+    // 检查文件大小 (限制为5MB)
+    const MAX_SIZE = 5 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      throw new Error(`文件大小不能超过 5MB`)
     }
 
-    const extension = file.name.split('.').pop()?.toLowerCase() || ''
-    
-    const isValidType = Object.values(API_CONFIG.FILE_TYPES).some(
-      (types: FileTypes) => types.includes(extension)
-    )
-    
-    if (!isValidType) {
-      throw new Error('不支持的文件类型')
+    // 检查文件类型
+    if (file.type.startsWith('image/')) {
+      const supportedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!supportedTypes.includes(file.type)) {
+        throw new Error('仅支持 JPEG、PNG、GIF 或 WebP 格式的图片');
+      }
     }
 
     return true
@@ -36,16 +36,24 @@ export const fileService = {
    * 读取文件内容
    * @param file - 要读取的文件对象
    * @returns {Promise<string>} 返回文件内容的Promise
-   * - 如果是图片文件，返回base64编码的字符串
-   * - 如果是文本文件，返回文本内容
    */
   async readFile(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
       
-      reader.onload = (e: ProgressEvent<FileReader>) => {
+      reader.onload = async (e: ProgressEvent<FileReader>) => {
         if (e.target?.result) {
-          resolve(e.target.result as string)
+          if (file.type.startsWith('image/')) {
+            // 对于图片，先加载到 Image 对象中验证
+            try {
+              await this.validateImageData(e.target.result as string);
+              resolve(e.target.result as string);
+            } catch (error) {
+              reject(new Error('图片格式无效或已损坏'));
+            }
+          } else {
+            resolve(e.target.result as string);
+          }
         }
       }
       
@@ -59,5 +67,26 @@ export const fileService = {
         reader.readAsText(file)
       }
     })
+  },
+
+  /**
+   * 验证图片数据是否有效
+   * @param dataUrl - 图片的 Data URL
+   * @returns {Promise<boolean>}
+   */
+  validateImageData(dataUrl: string): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        // 检查图片是否有效尺寸
+        if (img.width > 0 && img.height > 0) {
+          resolve(true);
+        } else {
+          reject(new Error('Invalid image dimensions'));
+        }
+      };
+      img.onerror = () => reject(new Error('Invalid image data'));
+      img.src = dataUrl;
+    });
   }
 } 
